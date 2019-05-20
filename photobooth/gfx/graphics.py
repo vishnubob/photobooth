@@ -1,9 +1,9 @@
 import os
 import time
 import random
+import threading
 import pygame as pg
 from pygame.locals import *
-
 
 class EventHandler(object):
     def fire(self, event):
@@ -29,6 +29,7 @@ class EventManager(object):
         handler.fire(event)
 
 class Canvas(object):
+    DefaultResolution = (1920, 1080)
     screen = None
     
     def __init__(self, frame_rate=60):
@@ -40,7 +41,7 @@ class Canvas(object):
         disp_no = os.getenv("DISPLAY")
         if disp_no:
             print("I'm running under X display = {0}".format(disp_no))
-        drivers = ['x11', 'fbcon', 'directfb', 'svgalib']
+        drivers = ['fbcon', 'directfb', 'svgalib', 'x11']
         found = False
         for driver in drivers:
             if not os.getenv('SDL_VIDEODRIVER'):
@@ -55,6 +56,8 @@ class Canvas(object):
     
         if not found:
             raise Exception('No suitable video driver found!')
+        #pg.display.set_mode(self.DefaultResolution, pg.RESIZABLE)
+        #pg.display.toggle_fullscreen()
         
     def init_pygame(self):
         self.init_display_driver()
@@ -77,7 +80,7 @@ class Canvas(object):
 class CountDown(object):
     def __init__(self, canvas):
         self.canvas = canvas
-        self.font = pg.font.Font(None, 48)
+        self.font = pg.font.Font(None, 240)
         self.count = 3
         handler = TimerHandler(self.increment)
         self.canvas.events.register(USEREVENT, handler)
@@ -95,7 +98,7 @@ class CountDown(object):
         tr = (now - self.timestamp) / 1000
         angle = 360 * tr
         scale = 25 * tr
-        print(self.count, angle, scale, now, self.timestamp)
+        #print(self.count, angle, scale, now, self.timestamp)
         msg = str(self.count)
         surface = self.font.render(msg, True, pg.Color("dodgerblue"))
         surface = pg.transform.rotozoom(surface, angle, scale)
@@ -104,8 +107,56 @@ class CountDown(object):
         self.canvas.screen.fill(pg.Color("red"))
         self.canvas.screen.blit(surface, rect)
 
-canvas = Canvas()
-cd = CountDown(canvas)
-while True:
-    cd.draw()
-    canvas.loop()
+class DisplayController(object):
+    def __init__(self, canvas):
+        self.canvas = canvas
+        self.font = pg.font.Font(None, 240)
+        self.buffer = pg.Surface(self.canvas.screen.get_size())
+        self.buffer.fill(pg.Color("black"))
+        self.refresh = None
+
+    def show_text(self, text):
+        def wrapper():
+            self._show_text(text)
+        self.refresh = wrapper
+
+    def show_image(self, fn_img):
+        def wrapper():
+            self._show_image(fn_img)
+        self.refresh = wrapper
+
+    def _show_image(self, fn_img):
+        img = pg.image.load(fn_img)
+        screen_rect = self.canvas.screen.get_rect()
+        rect = img.get_rect(center=(screen_rect.centerx, screen_rect.centery))
+        self.buffer.fill(pg.Color("black"))
+        self.buffer.blit(img, rect)
+
+    def _show_text(self, text):
+        surface = self.font.render(text, True, pg.Color("dodgerblue"))
+        screen_rect = self.canvas.screen.get_rect()
+        rect = surface.get_rect(center=(screen_rect.centerx, screen_rect.centery))
+        self.buffer.fill(pg.Color("black"))
+        self.buffer.blit(surface, rect)
+
+    def draw(self):
+        if self.refresh:
+            self.refresh()
+            self.refresh = None
+        rect = self.buffer.get_rect()
+        self.canvas.screen.blit(self.buffer, rect)
+
+class DisplayEngine(threading.Thread):
+    def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
+        self.running = False
+        self.daemon = True
+        self.canvas = Canvas()
+        self.control = DisplayController(self.canvas)
+
+    def run(self):
+        self.running = True
+        while self.running:
+            self.control.draw()
+            self.canvas.loop()
+

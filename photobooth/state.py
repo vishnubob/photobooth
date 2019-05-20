@@ -4,6 +4,16 @@ from . base import Singleton
 from . keys import get_input
 from . timer import Timer
 
+"""
+import cProfile as profile
+import atexit
+profiler = profile.Profile()
+#profiler.enable()
+def save_profiler():
+    profiler.dump_stats("photobooth.prof")
+atexit.register(save_profiler)
+"""
+
 def register_state(cls):
     machine = StateMachine()
     machine.add_state(cls)
@@ -90,7 +100,11 @@ class CountdownBaseState(BaseState):
         elapsed = int(self.timer.elapsed)
         if elapsed != self.last_report:
             self.last_report = elapsed
-            print(self.DelayCount - elapsed)
+            msg = str(self.DelayCount - elapsed)
+            print(msg, self.timer.elapsed)
+            photobooth.display.show_text(msg)
+            #profiler.runcall(photobooth.display.show_text, msg)
+            #print(self.timer.elapsed)
 
 @register_state
 class CaptureBaseState(BaseState):

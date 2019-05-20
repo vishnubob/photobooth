@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+from photobooth.gfx import server
 from photobooth import Factory
 
 def cli():
@@ -10,8 +11,7 @@ def cli():
 
 def main(args):
     factory = Factory(args.config)
-    booth = factory.build_photobooth()
-    booth.run()
+    server.run()
 
 if __name__ == "__main__":
     args = cli()

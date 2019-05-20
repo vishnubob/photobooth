@@ -1,1 +1,2 @@
-from . photobooth import Photobooth
+from . photobooth import Photobooth, Factory
+from . config import config
