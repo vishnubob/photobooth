@@ -4,6 +4,7 @@ import random
 import threading
 import pygame as pg
 from pygame.locals import *
+from .. base import Singleton
 
 class EventHandler(object):
     def fire(self, event):
@@ -53,9 +54,10 @@ class Canvas(object):
                 continue
             found = True
             break
-    
         if not found:
             raise Exception('No suitable video driver found!')
+        modes = pg.display.list_modes()
+        pg.display.set_mode(modes[0])
         #pg.display.set_mode(self.DefaultResolution, pg.RESIZABLE)
         #pg.display.toggle_fullscreen()
         
@@ -68,6 +70,7 @@ class Canvas(object):
         self.screen.fill((0, 0, 0))        
         pg.font.init()
         pg.display.update()
+        pg.mouse.set_visible(False)
         self.clock = pg.time.Clock()
 
     def loop(self):
@@ -127,9 +130,10 @@ class DisplayController(object):
 
     def _show_image(self, fn_img):
         img = pg.image.load(fn_img)
+        img = pg.transform.scale(img, self.canvas.size)
         screen_rect = self.canvas.screen.get_rect()
         rect = img.get_rect(center=(screen_rect.centerx, screen_rect.centery))
-        self.buffer.fill(pg.Color("black"))
+        self.buffer.fill(pg.Color("red"))
         self.buffer.blit(img, rect)
 
     def _show_text(self, text):
@@ -146,13 +150,17 @@ class DisplayController(object):
         rect = self.buffer.get_rect()
         self.canvas.screen.blit(self.buffer, rect)
 
-class DisplayEngine(threading.Thread):
+class DisplayEngine(Singleton, threading.Thread):
     def __init__(self, *args, **kw):
+        pass
+
+    def init_instance(self, *args, **kw):
         super().__init__(*args, **kw)
         self.running = False
         self.daemon = True
         self.canvas = Canvas()
         self.control = DisplayController(self.canvas)
+        self.start()
 
     def run(self):
         self.running = True

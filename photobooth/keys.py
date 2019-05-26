@@ -6,13 +6,8 @@ import atexit
 from . base import Singleton
 
 class KeyInput(Singleton):
-    __instance = None
-
-    def __new__(cls):
-        instance = super().__new__(cls)
-        if not hasattr(instance, "initialized"):
-            instance.initialized = False
-        return instance
+    def init_instance(self):
+        self.initialized = False
 
     def initialize(self):
         self.old_settings = termios.tcgetattr(sys.stdin)

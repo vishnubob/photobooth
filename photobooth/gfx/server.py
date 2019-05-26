@@ -9,18 +9,37 @@ class DisplayManager(BaseManager):
 class DisplayControl(object):
     def init_engine(self):
         self.engine = DisplayEngine()
-        self.engine.start()
         self.control = self.engine.control
 
     def show_text(self, text):
         self.control.show_text(text)
 
     def show_image(self, fn_img):
-        self.contol.show_image(fn_img)
+        self.control.show_image(fn_img)
 
+class DummyControl(object):
+    def init_engine(self):
+        print("init_engine")
+
+    def show_text(self, text):
+        print("show_text", text)
+
+    def show_image(self, fn_img):
+        print("show_image", fn_img)
+
+args = None
+
+def get_mode():
+    global args
+    return args
+
+DisplayManager.register("DummyControl", DummyControl)
 DisplayManager.register("DisplayControl", DisplayControl)
+DisplayManager.register("get_mode", get_mode)
 
-def run():
+def run(dummy=False):
+    global args
+    args = {"dummy": dummy}
     address = (
         config["graphics"]["server_address"],
         config["graphics"]["port"]

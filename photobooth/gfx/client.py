@@ -16,7 +16,20 @@ class DisplayClient(object):
                 break
             except ConnectionRefusedError:
                 time.sleep(5)
-        self.control = self.man.DisplayControl()
+        mode = self.man.get_mode()._getvalue()
+        if mode["dummy"]:
+            self.control = self.man.DummyControl()
+        else:
+            self.control = self.man.DisplayControl()
         self.control.init_engine()
-        self.show_text = self.control.show_text
-        self.show_image = self.control.show_image
+
+    def call(self, func):
+        func()
+
+    def show_text(self, *args, **kw):
+        func = lambda: self.control.show_text(*args, **kw)
+        self.call(func)
+
+    def show_image(self, *args, **kw):
+        func = lambda: self.control.show_image(*args, **kw)
+        self.call(func)

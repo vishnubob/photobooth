@@ -2,17 +2,8 @@ import time
 from . logger import *
 from . base import Singleton
 from . keys import get_input
-from . timer import Timer
-
-"""
-import cProfile as profile
-import atexit
-profiler = profile.Profile()
-#profiler.enable()
-def save_profiler():
-    profiler.dump_stats("photobooth.prof")
-atexit.register(save_profiler)
-"""
+from . timers import Timer
+from . events import EventManager
 
 def register_state(cls):
     machine = StateMachine()
@@ -22,13 +13,14 @@ def register_state(cls):
 class BaseState(object):
     Name = "BaseState"
 
-    def enter(self, last_state):
+    def __init__(self):
+        self.events = EventManager()
+        self.states = StateMachine()
+
+    def enter(self, last_state, **kw):
         pass
 
     def tick(self):
-        pass
-
-    def enter(self, last_state):
         pass
 
     def exit(self, next_state):
@@ -47,33 +39,38 @@ class BaseState(object):
 class StateMachine(Singleton):
     States = {}
 
-    def __new__(cls):
-        instance = super().__new__(cls)
-        if not hasattr(instance, "current_state"):
-            instance.current_state = None
-        if not hasattr(instance, "states"):
-            instance.states = {}
-        return instance
+    def init_instance(self):
+        self._current_state = None
+        self._next_state = None
+        self.states = {}
 
     def add_state(self, state_class):
         state = state_class()
         self.states[state.Name] = state
 
-    def enter(self, state_name):
-        logmsg = "Entering state '%s'" % state_name
-        next_state = self.states[state_name]
-        if self.current_state is not None:
-            logmsg += " from state '%s'" % self.current_state
-            self.current_state.exit(next_state)
+    def set_next_state(self, name, **kw):
+        assert self._next_state is None
+        assert name in self.states
+        self._next_state = (name, kw)
+
+    def switch(self):
+        assert self._next_state is not None
+        (next_state_name, next_kw) = self._next_state
+        logmsg = "Entering state '%s'" % next_state_name
+        next_state = self.states[next_state_name]
+        if self._current_state is not None:
+            logmsg += " from state '%s'" % self._current_state
+            self._current_state.exit(next_state)
         info(logmsg)
-        next_state.enter(self.current_state)
-        self.current_state = next_state
+        next_state.enter(self._current_state, **next_kw)
+        self._next_state = None
+        self._current_state = next_state
 
     def tick(self):
-        next_state_name = self.current_state.tick()
-        if next_state_name is not None:
-            self.enter(next_state_name)
-        return self.current_state.Name
+        if self._next_state is not None:
+            self.switch()
+        if self._current_state:
+            self._current_state.tick()
 
 @register_state
 class IdleBaseState(BaseState):
@@ -82,58 +79,61 @@ class IdleBaseState(BaseState):
     def tick(self):
         inch = get_input()
         if inch:
-            return "countdown"
+            self.states.set_next_state("countdown")
     
 @register_state
 class CountdownBaseState(BaseState):
     Name = "countdown"
     DelayCount = 3
 
-    def enter(self, last_state):
+    def enter(self, last_state, **kw):
         self.timer = Timer(self.DelayCount)
         self.count = self.DelayCount
         self.last_report = None
 
     def tick(self):
         if self.timer.expired:
-            return "capture"
+            self.states.set_next_state("capture")
+            return
         elapsed = int(self.timer.elapsed)
         if elapsed != self.last_report:
             self.last_report = elapsed
             msg = str(self.DelayCount - elapsed)
-            print(msg, self.timer.elapsed)
+            #print(msg, self.timer.elapsed)
             photobooth.display.show_text(msg)
-            #profiler.runcall(photobooth.display.show_text, msg)
-            #print(self.timer.elapsed)
 
 @register_state
 class CaptureBaseState(BaseState):
     Name = "capture"
 
-    def enter(self, last_state):
-        pass
+    def capture_handler(self, event):
+        self.states.set_next_state("process", image_filename=event.data["image_filename"])
+        self.events.remove_handler("capture", self.capture_handler)
 
-    def tick(self):
-        return "process"
+    def enter(self, last_state, **kw):
+        self.events.add_handler("capture", self.capture_handler)
+        img = photobooth.camera.capture()
 
 @register_state
 class ProcessBaseState(BaseState):
     Name = "process"
 
-    def enter(self, last_state):
-        pass
-
+    def enter(self, last_state, image_filename=None, **kw):
+        self.image_filename=image_filename
+    
     def tick(self):
-        return "display"
+        self.states.set_next_state("display", image_filename=self.image_filename)
 
 @register_state
 class DisplayBaseState(BaseState):
     Name = "display"
     DelayCount = 10
 
-    def enter(self, last_state):
+    def enter(self, last_state, image_filename=None, **kw):
+        img_path = photobooth.datastore.get_path("negatives", image_filename)
+        photobooth.display.show_image(img_path)
         self.timer = Timer(self.DelayCount)
 
     def tick(self):
         if self.timer.expired:
-            return "idle"
+            self.states.set_next_state("idle")

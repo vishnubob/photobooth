@@ -1,43 +1,51 @@
 import os
+import importlib
+from . timers import Timers
 from . state import StateMachine
 from . import keys
-from . timer import Timer
+from . timers import Timer, Timers
 from . config import config
 from . import gfx
+from . import store
 
-keys.initialize()
 
 class Factory(object):
     def __init__(self, fn_config):
         config.load_config(fn_config)
 
-    def init_paths(self):
-        dirs = self.config["paths"].copy()
-        dir_root = self.config["paths"]["root"]
-        if not os.path.isdir(dir_root):
-            os.makedirs(dir_root)
-        del dirs["root"]
-        for (name, dir_path) in dirs.items():
-            if not os.path.abspath(dir_path):
-                dir_path = os.path.join(dir_root, dir_path)
-            if not os.path.isdir(dir_path):
-                os.makedirs(dir_path)
-            self.config[paths][name] = dir_path
+    def build_camera(self):
+        clspath = config["camera"]["class"]
+        parts = clspath.split('.')
+        (modpath, clsname) = (str.join('.', parts[:-1]), parts[-1])
+        modpath = ".%s" % modpath
+        mod = importlib.import_module(modpath, "photobooth")
+        cls = getattr(mod, clsname)
+        return cls()
+
+    def build_datastore(self):
+        return store.DataStore()
 
     def build_photobooth(self):
-        booth = Photobooth()
+        camera = self.build_camera()
+        datastore = self.build_datastore()
+        booth = Photobooth(camera=camera, datastore=datastore)
         __builtins__["photobooth"] = booth
+        keys.initialize()
         return booth
 
 class Photobooth(object):
-    def __init__(self):
+    def __init__(self, camera=None, datastore=None):
+        self.timers = Timers()
+        self.camera = camera
+        self.datastore = datastore
         self.state = StateMachine()
-        self.state.enter("idle")
+        self.state.set_next_state("idle")
         self.display = gfx.client.DisplayClient()
         self.display.connect()
         self.running = False
 
     def loop(self):
+        self.timers.tick()
         self.state.tick()
 
     def run(self, rate=60):
@@ -47,4 +55,3 @@ class Photobooth(object):
             self.loop()
             timer.wait()
             timer.reset()
-
