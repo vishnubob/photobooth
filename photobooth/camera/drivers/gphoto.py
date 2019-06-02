@@ -88,20 +88,20 @@ class Camera(object):
         return gphoto2.GP_CONTEXT_FEEDBACK_OK
 
     def cb_cancel(self, context, data):
-        print('cb_cancel', data)
+        #print('cb_cancel', data)
         return gphoto2.GP_CONTEXT_FEEDBACK_OK
 
     def cb_progress_start(self, context, target, text, data):
-        print('cb_progress_start', target, text, data)
+        #print('cb_progress_start', target, text, data)
         self.state = "busy"
         return 123
 
     def cb_progress_update(self, context, id_, current, data):
-        print('cb_progress_update', id_, current, data)
+        #print('cb_progress_update', id_, current, data)
         self.state = "busy"
 
     def cb_progress_stop(self, context, id_, data):
-        print('cb_progress_stop', id_, data)
+        #print('cb_progress_stop', id_, data)
         self.state = "idle"
 
     def new_context(self):

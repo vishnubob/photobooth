@@ -4,6 +4,7 @@ from . base import Singleton
 from . keys import get_input
 from . timers import Timer
 from . events import EventManager
+from . gfx.client import display_text, display_image
 
 def register_state(cls):
     machine = StateMachine()
@@ -100,7 +101,7 @@ class CountdownBaseState(BaseState):
             self.last_report = elapsed
             msg = str(self.DelayCount - elapsed)
             #print(msg, self.timer.elapsed)
-            photobooth.display.show_text(msg)
+            display_text(msg)
 
 @register_state
 class CaptureBaseState(BaseState):
@@ -131,7 +132,7 @@ class DisplayBaseState(BaseState):
 
     def enter(self, last_state, image_filename=None, **kw):
         img_path = photobooth.datastore.get_path("negatives", image_filename)
-        photobooth.display.show_image(img_path)
+        display_image(img_path)
         self.timer = Timer(self.DelayCount)
 
     def tick(self):

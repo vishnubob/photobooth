@@ -5,7 +5,6 @@ from . state import StateMachine
 from . import keys
 from . timers import Timer, Timers
 from . config import config
-from . import gfx
 from . import store
 
 
@@ -40,8 +39,6 @@ class Photobooth(object):
         self.datastore = datastore
         self.state = StateMachine()
         self.state.set_next_state("idle")
-        self.display = gfx.client.DisplayClient()
-        self.display.connect()
         self.running = False
 
     def loop(self):

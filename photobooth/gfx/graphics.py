@@ -118,17 +118,7 @@ class DisplayController(object):
         self.buffer.fill(pg.Color("black"))
         self.refresh = None
 
-    def show_text(self, text):
-        def wrapper():
-            self._show_text(text)
-        self.refresh = wrapper
-
-    def show_image(self, fn_img):
-        def wrapper():
-            self._show_image(fn_img)
-        self.refresh = wrapper
-
-    def _show_image(self, fn_img):
+    def display_image(self, fn_img):
         img = pg.image.load(fn_img)
         img = pg.transform.scale(img, self.canvas.size)
         screen_rect = self.canvas.screen.get_rect()
@@ -136,7 +126,7 @@ class DisplayController(object):
         self.buffer.fill(pg.Color("red"))
         self.buffer.blit(img, rect)
 
-    def _show_text(self, text):
+    def display_text(self, text):
         surface = self.font.render(text, True, pg.Color("dodgerblue"))
         screen_rect = self.canvas.screen.get_rect()
         rect = surface.get_rect(center=(screen_rect.centerx, screen_rect.centery))

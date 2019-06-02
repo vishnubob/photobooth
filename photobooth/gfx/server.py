@@ -1,50 +1,27 @@
 from .. config import config
 from .. base import Singleton
+from .. import bus
 from . graphics import DisplayEngine
-from multiprocessing.managers import BaseManager
 
-class DisplayManager(BaseManager):
-    pass
-
-class DisplayControl(object):
-    def init_engine(self):
+class DisplayServer(Singleton):
+    def init_instance(self):
         self.engine = DisplayEngine()
         self.control = self.engine.control
+        bus.handler(self.handle_display_text)
+        bus.handler(self.handle_display_image)
 
-    def show_text(self, text):
-        self.control.show_text(text)
+    def run(self):
+        self.engine.run()
 
-    def show_image(self, fn_img):
-        self.control.show_image(fn_img)
+    def handle_display_text(self, msg):
+        text = msg["data"]
+        self.control.display_text(text)
 
-class DummyControl(object):
-    def init_engine(self):
-        print("init_engine")
+    def handle_display_image(self, msg):
+        fn_img = msg["data"]
+        self.control.display_image(fn_img)
 
-    def show_text(self, text):
-        print("show_text", text)
-
-    def show_image(self, fn_img):
-        print("show_image", fn_img)
-
-args = None
-
-def get_mode():
-    global args
-    return args
-
-DisplayManager.register("DummyControl", DummyControl)
-DisplayManager.register("DisplayControl", DisplayControl)
-DisplayManager.register("get_mode", get_mode)
-
-def run(dummy=False):
-    global args
-    args = {"dummy": dummy}
-    address = (
-        config["graphics"]["server_address"],
-        config["graphics"]["port"]
-    )
-    authkey = config["graphics"]["authkey"].encode()
-    man = DisplayManager(address=address, authkey=authkey)
-    srv = man.get_server()
-    srv.serve_forever()
+def run(**kw):
+    server = DisplayServer()
+    bus.start_thread()
+    server.run()
