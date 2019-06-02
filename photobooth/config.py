@@ -21,3 +21,4 @@ class Config(dict):
         self.update(cfg)
 
 config = Config()
+load_config = config.load_config

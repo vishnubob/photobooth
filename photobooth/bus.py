@@ -1,3 +1,4 @@
+import sys
 import time
 import redis
 import json
@@ -5,7 +6,11 @@ import pickle
 import uuid
 import threading
 
+from tblib import pickling_support
+pickling_support.install()
+
 from . base import Singleton
+#from photobooth.base import Singleton
 
 class MessageBus(Singleton):
     RedisHost = "192.168.1.3"
@@ -16,9 +21,9 @@ class MessageBus(Singleton):
         self.channels = {}
         self.thread = None
 
-    def start_thread(self):
+    def start_thread(self, daemon=True):
         assert self.thread is None
-        self.thread = self.bus.run_in_thread(sleep_time=0.001)
+        self.thread = self.bus.run_in_thread(sleep_time=0.001, daemon=daemon)
 
     def stop_thread(self):
         assert self.thread is not None
@@ -85,8 +90,14 @@ class ReturnObject(object):
         }
         return desc
 
+    @property
+    def is_ready(self):
+        return self.event.is_set()
+
     def get_value(self):
         assert self.event.is_set()
+        if isinstance(self._value, Exception):
+            self._value.raise_exc()
         return self._value
 
     def set_value(self, value):
@@ -100,6 +111,17 @@ class ReturnObject(object):
         if not ok:
             raise TimeoutError
         return self.value
+
+    def poll(self):
+        return self.is_ready
+
+class ReturnException(Exception):
+    def __init__(self, exc):
+        self.exc = exc
+        self.tb = sys.exc_info()[2]
+
+    def raise_exc(self):
+        raise self.exc.with_traceback(self.tb)
 
 class ReturnManager(Singleton):
     def init_instance(self):
@@ -115,6 +137,7 @@ class ReturnManager(Singleton):
         return_value = msg["data"]["return_value"]
         self.lock.acquire()
         ro = self.waiters[return_uid]
+        del self.waiters[return_uid]
         self.lock.release()
         ro.value = return_value
 
@@ -165,7 +188,10 @@ class Service(Singleton):
         args = data["args"]
         kwargs = data["kwargs"]
         func = getattr(self, func_name)
-        ret = func.wrapper(*args, **kwargs)
+        try:
+            ret = func.wrapper(*args, **kwargs)
+        except BaseException as err:
+            ret = ReturnException(err)
         data["return_value"] = ret
         return_channel = data["return_channel"]
         publish(return_channel, data)
@@ -179,7 +205,7 @@ class Service(Singleton):
         }
         data.update(ro.receipt)
         publish(self.channel_name, data)
-        return ro.wait()
+        return ro
 
 def proxy(call):
     class ProxyCall(object):

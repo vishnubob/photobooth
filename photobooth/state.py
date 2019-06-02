@@ -77,8 +77,8 @@ class IdleBaseState(BaseState):
     Name = "idle"
 
     def tick(self):
-        inch = get_input()
-        if inch:
+        presence = photobooth.presence.check_presence().wait()
+        if presence:
             self.states.set_next_state("countdown")
     
 @register_state

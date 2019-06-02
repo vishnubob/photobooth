@@ -5,14 +5,10 @@ from . state import StateMachine
 from . import keys
 from . timers import Timer, Timers
 from . config import config
-from . display import DisplayService
+from . service import display, presence
 from . import store
 
-
 class Factory(object):
-    def __init__(self, fn_config):
-        config.load_config(fn_config)
-
     def build_camera(self):
         clspath = config["camera"]["class"]
         parts = clspath.split('.')
@@ -38,7 +34,8 @@ class Photobooth(object):
         self.timers = Timers()
         self.camera = camera
         self.datastore = datastore
-        self.display = DisplayService()
+        self.display = display.DisplayService()
+        self.presence = presence.PresenceService()
         self.state = StateMachine()
         self.state.set_next_state("idle")
         self.running = False

@@ -1,7 +1,7 @@
 from .. config import config
 from .. base import Singleton
 from .. import bus
-from . graphics import DisplayEngine
+from .. display import DisplayEngine
 
 class DisplayService(bus.Service):
     ServiceName = "Display"
