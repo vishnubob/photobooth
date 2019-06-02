@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
-from photobooth.gfx import server
+from photobooth.display import service
 from photobooth import Factory
 
 def cli():
@@ -12,7 +12,7 @@ def cli():
 
 def main(args):
     factory = Factory(args.config)
-    server.run(dummy=args.dummy)
+    service.run(dummy=args.dummy)
 
 if __name__ == "__main__":
     args = cli()

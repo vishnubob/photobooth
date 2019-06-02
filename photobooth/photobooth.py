@@ -5,6 +5,7 @@ from . state import StateMachine
 from . import keys
 from . timers import Timer, Timers
 from . config import config
+from . display import DisplayService
 from . import store
 
 
@@ -37,6 +38,7 @@ class Photobooth(object):
         self.timers = Timers()
         self.camera = camera
         self.datastore = datastore
+        self.display = DisplayService()
         self.state = StateMachine()
         self.state.set_next_state("idle")
         self.running = False
