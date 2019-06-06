@@ -94,9 +94,19 @@ class ChromaKey(object):
         img = np.round(img).astype("uint8")
         return Image.fromarray(img)
 
-    def __call__(self, front, back):
+    def __call__(self, front, back, fn_blend=None):
+        if type(front) is str:
+            front = Image.open(front)
+        if type(back) is str:
+            back = Image.open(back)
+        if front.size != back.size:
+            back = back.resize(front.size)
         mask = self.get_mask(front)
-        return self.blend(front, back, mask)
+        blend = self.blend(front, back, mask)
+        if type(fn_blend) is str:
+            blend.save(fn_blend)
+        else:
+            return blend
 
 if __name__ == "__main__":
     import sys

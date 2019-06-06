@@ -1,44 +1,26 @@
 import os
 import importlib
+from . base import Singleton
 from . timers import Timers
 from . state import StateMachine
 from . import keys
 from . timers import Timer, Timers
 from . config import config
-from . service import display, presence
+from . service import display, presence, camera, photolab
 from . import store
 
-class Factory(object):
-    def build_camera(self):
-        clspath = config["camera"]["class"]
-        parts = clspath.split('.')
-        (modpath, clsname) = (str.join('.', parts[:-1]), parts[-1])
-        modpath = ".%s" % modpath
-        mod = importlib.import_module(modpath, "photobooth")
-        cls = getattr(mod, clsname)
-        return cls()
-
-    def build_datastore(self):
-        return store.DataStore()
-
-    def build_photobooth(self):
-        camera = self.build_camera()
-        datastore = self.build_datastore()
-        booth = Photobooth(camera=camera, datastore=datastore)
-        __builtins__["photobooth"] = booth
-        keys.initialize()
-        return booth
-
-class Photobooth(object):
-    def __init__(self, camera=None, datastore=None):
+class Photobooth(Singleton):
+    def init_instance(self):
         self.timers = Timers()
-        self.camera = camera
-        self.datastore = datastore
+        self.camera = camera.CameraService()
+        self.datastore = store.DataStore()
         self.display = display.DisplayService()
         self.presence = presence.PresenceService()
+        self.photolab = photolab.PhotolabService()
         self.state = StateMachine()
         self.state.set_next_state("idle")
         self.running = False
+        __builtins__["photobooth"] = self
 
     def loop(self):
         self.timers.tick()
@@ -51,3 +33,8 @@ class Photobooth(object):
             self.loop()
             timer.wait()
             timer.reset()
+
+def run(**kw):
+    photobooth = Photobooth()
+    photobooth.run()
+

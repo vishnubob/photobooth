@@ -14,10 +14,6 @@ class USBCamera(BaseCamera):
         self.timers = Timers()
 
     def capture(self):
-        img = self.camera.capture(copy=True, prefix=self.datastore.get_path("negatives"))
-        self.image_fn = os.path.split(img)[-1]
-        self.timers.set_timeout(.1, self.captured)
-
-    def captured(self):
-        data = {"success": True, "image_filename": self.image_fn}
-        fire("capture", data)
+        prefix = self.datastore.get_path("negatives")
+        img = self.camera.capture(copy=True, prefix=prefix)
+        return img

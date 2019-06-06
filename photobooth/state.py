@@ -1,4 +1,6 @@
+import os
 import time
+import random
 from . logger import *
 from . base import Singleton
 from . keys import get_input
@@ -73,7 +75,7 @@ class StateMachine(Singleton):
             self._current_state.tick()
 
 @register_state
-class IdleBaseState(BaseState):
+class IdleState(BaseState):
     Name = "idle"
 
     def tick(self):
@@ -82,7 +84,7 @@ class IdleBaseState(BaseState):
             self.states.set_next_state("countdown")
     
 @register_state
-class CountdownBaseState(BaseState):
+class CountdownState(BaseState):
     Name = "countdown"
     DelayCount = 3
 
@@ -103,35 +105,61 @@ class CountdownBaseState(BaseState):
             photobooth.display.display_text(msg)
 
 @register_state
-class CaptureBaseState(BaseState):
+class CaptureState(BaseState):
     Name = "capture"
 
-    def capture_handler(self, event):
-        self.states.set_next_state("process", image_filename=event.data["image_filename"])
-        self.events.remove_handler("capture", self.capture_handler)
-
     def enter(self, last_state, **kw):
-        self.events.add_handler("capture", self.capture_handler)
-        img = photobooth.camera.capture()
+        self.capture_result = photobooth.camera.capture()
+
+    def tick(self):
+        if not self.capture_result.poll():
+            return
+        fn_image = self.capture_result.value
+        self.states.set_next_state("process", fn_image=fn_image)
 
 @register_state
-class ProcessBaseState(BaseState):
+class ProcessState(BaseState):
     Name = "process"
 
-    def enter(self, last_state, image_filename=None, **kw):
-        self.image_filename=image_filename
+    def select_background(self):
+        backgrounds = photobooth.datastore.backgrounds
+        keys = list(backgrounds.keys())
+        bgname = random.choice(keys)
+        bgpath = backgrounds[bgname]
+        return bgpath
+
+    def enter(self, last_state, fn_image=None, **kw):
+        self.fn_image = fn_image
+        self.fn_background = self.select_background()
+        image_name = os.path.split(self.fn_image)[-1]
+        self.fn_blend = photobooth.datastore.get_path("processed", image_name)
+        photolab_request = {
+            "steps": [
+                "chromakey"
+            ],
+            "chromakey": {
+                "fn_image": self.fn_image,
+                "fn_background": self.fn_background,
+                "fn_blend": self.fn_blend
+            }
+        }
+        self.lab_result = photobooth.photolab.process(photolab_request)
+        photobooth.display.display_text("processing...")
     
     def tick(self):
-        self.states.set_next_state("display", image_filename=self.image_filename)
+        if not self.lab_result.poll():
+            return
+        _ = self.lab_result.value
+        self.states.set_next_state("display", fn_image=self.fn_blend)
 
 @register_state
-class DisplayBaseState(BaseState):
+class DisplayState(BaseState):
     Name = "display"
     DelayCount = 10
 
-    def enter(self, last_state, image_filename=None, **kw):
-        img_path = photobooth.datastore.get_path("negatives", image_filename)
-        photobooth.display.display_image(img_path)
+    def enter(self, last_state, fn_image=None, **kw):
+        print("displaying", fn_image)
+        photobooth.display.display_image(fn_image)
         self.timer = Timer(self.DelayCount)
 
     def tick(self):

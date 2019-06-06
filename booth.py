@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 import argparse
-from photobooth.service import display, presence
-from photobooth import Factory, load_config
+from photobooth.service import display, presence, camera, photolab
+from photobooth import photobooth, load_config
 
 def cli():
     parent_parser = argparse.ArgumentParser(description="Photobooth")
@@ -21,19 +21,26 @@ def cli():
     presence_parser = services_parser.add_parser("presence", help="presence help")
     presence_parser.add_argument("-m", "--mode", dest="driver", choices=["dummy", "pir"], help="Use dummy mode")
 
+    # camera
+    camera_parser = services_parser.add_parser("camera", help="camera help")
+
+    # photolab
+    photolab_parser = services_parser.add_parser("photolab", help="photolab help")
+
     return parent_parser.parse_args()
 
 def main(args):
     load_config(args.config)
-    print(args)
     if args.service == "photobooth":
-        factory = Factory()
-        booth = factory.build_photobooth()
-        booth.run()
+        photobooth.run()
     elif args.service == "display":
         display.run(dummy=args.dummy)
     elif args.service == "presence":
         presence.run(driver=args.driver)
+    elif args.service == "camera":
+        camera.run()
+    elif args.service == "photolab":
+        photolab.run()
 
 if __name__ == "__main__":
     args = cli()
