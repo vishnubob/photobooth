@@ -4,7 +4,7 @@ TODO
 ## Build
     - Enclosure / mount for camera
     - Enclosure / mounts for flash cans
-    - Wire harnesses for PIR sensors
+    - ~~Wire harnesses for PIR sensors~~
 
 ## Buy
     - Tarps
