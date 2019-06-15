@@ -95,14 +95,13 @@ class PresenceDriverPIR(PresenceDriverBase):
     def __init__(self, **kw):
         super().__init__(**kw)
         import pigpio
-        self.service = service
         self.pi = pigpio.pi()
-        self.pir_gpio = 4
-        cb_id = self.pi.callback(self.pir_gpio, pigpio.EITHER_EDGE, presence_callback)
+        self.pir_gpio = 17
+        self.cb_id = self.pi.callback(self.pir_gpio, pigpio.RISING_EDGE, self.presence_callback)
 
-    def presence_callback(gpio, level, tick):
-        info = {"gpio": gpio, "level": level, "tick": tick}
-        rds.lpush("presence", json.dumps(info))
+    def presence_callback(self, gpio, level, tick):
+        if level == 1:
+            self.service.impulse_callback()
 
 def run(**kw):
     service = PresenceService(serve=True, **kw)

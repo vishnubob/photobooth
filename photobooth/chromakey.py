@@ -1,6 +1,9 @@
-import numpy as np
-from PIL import Image
-from sklearn import cluster
+try:
+    import numpy as np
+    from PIL import Image
+    from sklearn import cluster
+except ImportError:
+    pass
 
 class ColorSpace(object):
     ColorSpaces = {

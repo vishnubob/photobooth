@@ -5,7 +5,6 @@ from .. chromakey import ChromaKey
 class PhotolabService(bus.Service):
     @bus.proxy
     def process(self, request):
-        print("processing", request)
         steps = request["steps"]
         for step in steps:
             if step == "chromakey":
@@ -14,7 +13,6 @@ class PhotolabService(bus.Service):
                 raise ValueError("unknown step '%s' % step")
 
     def chromakey(self, request):
-        print("chromakey!", request)
         ckreq = request["chromakey"]
         fn_image = ckreq["fn_image"]
         fn_background = ckreq["fn_background"]
