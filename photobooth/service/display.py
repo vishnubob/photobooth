@@ -1,12 +1,12 @@
 from .. config import config
 from .. base import Singleton
 from .. import bus
-from .. display import DisplayEngine
 
 class DisplayService(bus.Service):
     ServiceName = "Display"
 
     def run(self):
+        from .. display import DisplayEngine
         self.engine = DisplayEngine()
         self.control = self.engine.control
         self.engine.run()

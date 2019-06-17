@@ -30,7 +30,7 @@ class EventManager(object):
         handler.fire(event)
 
 class Canvas(object):
-    DefaultResolution = (1920, 1080)
+    DefaultResolution = (1280, 720)
     screen = None
     
     def __init__(self, frame_rate=60):
@@ -57,8 +57,9 @@ class Canvas(object):
         if not found:
             raise Exception('No suitable video driver found!')
         modes = pg.display.list_modes()
-        pg.display.set_mode(modes[0])
-        #pg.display.set_mode(self.DefaultResolution, pg.RESIZABLE)
+        print(modes)
+        #pg.display.set_mode(modes[0])
+        pg.display.set_mode(self.DefaultResolution, pg.RESIZABLE)
         #pg.display.toggle_fullscreen()
         
     def init_pygame(self):

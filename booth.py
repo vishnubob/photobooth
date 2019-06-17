@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import argparse
-from photobooth.service import display, presence, camera, photolab
 from photobooth import photobooth, load_config
 
 def cli():
@@ -21,6 +20,9 @@ def cli():
     presence_parser = services_parser.add_parser("presence", help="presence help")
     presence_parser.add_argument("-m", "--mode", dest="driver", choices=["dummy", "pir"], help="Use dummy mode")
 
+    # presence
+    stt_parser = services_parser.add_parser("stt", help="speech to text help")
+
     # camera
     camera_parser = services_parser.add_parser("camera", help="camera help")
 
@@ -34,13 +36,20 @@ def main(args):
     if args.service == "photobooth":
         photobooth.run()
     elif args.service == "display":
+        from photobooth.service import display
         display.run(dummy=args.dummy)
     elif args.service == "presence":
+        from photobooth.service import presence
         presence.run(driver=args.driver)
     elif args.service == "camera":
+        from photobooth.service import camera
         camera.run()
     elif args.service == "photolab":
+        from photobooth.service import photolab
         photolab.run()
+    elif args.service == "stt":
+        from photobooth.service import stt
+        stt.run()
 
 if __name__ == "__main__":
     args = cli()

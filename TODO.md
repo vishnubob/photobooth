@@ -12,7 +12,7 @@ TODO
 ## Buy
 - Tarps
 - Paracord
-- [Fan](https://www.newegg.com/noctua-nf-a4x20-5v-pwm-case-fan/p/1YF-000T-00094) for Jetson
+- ~~[Fan](https://www.newegg.com/noctua-nf-a4x20-5v-pwm-case-fan/p/1YF-000T-00094) for Jetson~~
 
 ## Code
 - Optimize Chromakey code
