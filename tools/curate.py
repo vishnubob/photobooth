@@ -4,7 +4,6 @@ import json
 import sys
 import subprocess
 import time
-from imgops import resize_and_crop
 from PIL import Image
 import termios
 import atexit
@@ -16,7 +15,6 @@ def prompt(msg):
     sys.stdout.flush()
 
 def download(keyword, offset=0, **kw):
-    print("offset", offset)
     images = google_images_download.googleimagesdownload()
     args = {
         "keywords": keyword,
@@ -133,7 +131,7 @@ class Logbook(object):
         matches = []
         keys = set(keys)
         for topic in self.topics:
-            if not keys.intersection(set(topic)):
+            if keys.intersection(set(topic)) != keys:
                 continue
             matches.append(topic)
         return matches
@@ -257,6 +255,8 @@ class CurateImages(object):
         elif self.state == "keyword":
             offset = self.logbook.get_offset(self.keyword)
             self.path = download(self.keyword, offset=offset)
+            filename = os.path.split(self.path)[-1]
+            print(filename)
             self.logbook.set_offset(self.keyword, offset + 1)
             (proc, imgfn) = self.display(self.path)
             prompt("(k)eyword (s)ave (n)ext (q)uit\n")
