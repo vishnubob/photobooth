@@ -6,7 +6,7 @@ from . base import Singleton
 class DataStore(Singleton):
     def init_instance(self):
         self.init_paths()
-        self.load_backgrounds()
+        self.load_backdrops()
 
     def init_paths(self):
         self.paths = config["store"]["paths"].copy()
@@ -22,11 +22,13 @@ class DataStore(Singleton):
                 os.makedirs(dir_path)
             self.paths[name] = dir_path
 
-    def load_backgrounds(self):
-        self.backgrounds = {}
-        for imgfn in os.listdir(self.paths["backgrounds"]):
-            name = os.path.splitext(os.path.split(imgfn)[-1])[0]
-            self.backgrounds[name] = os.path.join(self.paths["backgrounds"], imgfn)
+    def load_backdrops(self):
+        self.backdrops = {}
+        for (root, dirs, files) in os.walk(self.paths["backdrops"]):
+            for fn in files:
+                path = os.path.join(root, fn)
+                name = os.path.splitext(os.path.split(path)[-1])[0]
+                self.backdrops[name] = path
     
     def copyinto(self, source, dest, filename=None):
         path = self.paths[dest]

@@ -6,6 +6,7 @@ from . base import Singleton
 from . keys import get_input
 from . timers import Timer
 from . events import EventManager
+from . config import config
 
 def register_state(cls):
     machine = StateMachine()
@@ -121,26 +122,30 @@ class CaptureState(BaseState):
 class ProcessState(BaseState):
     Name = "process"
 
-    def select_background(self):
-        backgrounds = photobooth.datastore.backgrounds
-        keys = list(backgrounds.keys())
+    def select_backdrop(self):
+        backdrops = photobooth.datastore.backdrops
+        keys = list(backdrops.keys())
         bgname = random.choice(keys)
-        bgpath = backgrounds[bgname]
+        bgpath = backdrops[bgname]
         return bgpath
 
     def enter(self, last_state, fn_image=None, **kw):
-        self.fn_image = fn_image
-        self.fn_background = self.select_background()
-        image_name = os.path.split(self.fn_image)[-1]
-        self.fn_blend = photobooth.datastore.get_path("processed", image_name)
+        self.fn_source = fn_image
+        self.fn_backdrop = self.select_backdrop()
+        image_name = os.path.split(self.fn_source)[-1]
+        self.fn_target = photobooth.datastore.get_path("processed", image_name)
         photolab_request = {
+            "fn_source": self.fn_source,
+            "fn_target": self.fn_target,
             "steps": [
+                "resize",
                 "chromakey"
             ],
+            "resize": {
+                "size": config["images"]["resolution"]
+            },
             "chromakey": {
-                "fn_image": self.fn_image,
-                "fn_background": self.fn_background,
-                "fn_blend": self.fn_blend
+                "fn_backdrop": self.fn_backdrop,
             }
         }
         self.lab_result = photobooth.photolab.process(photolab_request)
@@ -150,7 +155,7 @@ class ProcessState(BaseState):
         if not self.lab_result.poll():
             return
         _ = self.lab_result.value
-        self.states.set_next_state("display", fn_image=self.fn_blend)
+        self.states.set_next_state("display", fn_image=self.fn_target)
 
 @register_state
 class DisplayState(BaseState):

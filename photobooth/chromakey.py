@@ -62,16 +62,14 @@ class ChromaKey(object):
     def get_key(self, img):
         cs = ColorSpace()
         img_ycc = cs(img)
-        # Cr
-        cr = img_ycc[:,:,1].flatten()
-        (cr_freq, cr_val) = np.histogram(cr, bins=self.bins)
-        cr_key = cr_val[np.argmax(cr_freq)]
-        # Cb
-        cb = img_ycc[:,:,2].flatten()
-        (cb_freq, cb_val) = np.histogram(cb, bins=self.bins)
-        cb_key = cb_val[np.argmax(cb_freq)]
-        return (cr_key, cb_key)
-    
+        cc_img = cs(img)[:,:,1:].reshape((-1, 2))
+        km = cluster.KMeans(n_init=1, n_clusters=2)
+        km.fit(cc_img)
+        values = list(km.cluster_centers_.squeeze())
+        key_idx = np.argmax(np.bincount(km.labels_))
+        key = values[key_idx]
+        return key
+
     def get_distance(self, img):
         cs = ColorSpace()
         cc_img = cs(img)[:,:,1:]
