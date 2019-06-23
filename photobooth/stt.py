@@ -7,6 +7,7 @@ import pyaudio
 import webrtcvad
 from scipy import signal
 from . logger import logger
+from . config import config
 
 class Audio(object):
     """Streams raw audio from microphone. Data is received in a separate thread, and stored in a buffer, to be read from."""
@@ -70,6 +71,7 @@ class Audio(object):
         return self.buffer_queue.get()
 
     def start_stream(self):
+        print(self.kwargs)
         self.stream = self.pa.open(**self.kwargs)
         self.stream.start_stream()
 
@@ -137,6 +139,7 @@ DefaultConfig = {
     "model_dir": "model",
     "beam_width": 500,
     "sample_rate": 16000,
+    "input_rate": 48000,
     "lm_alpha": 0.75,
     "lm_beta": 1.85,
     "n_features": 26,
@@ -146,9 +149,23 @@ DefaultConfig = {
 }
 
 class SpeechToText(object):
-    def __init__(self, config=None):
-        self.config = config if config is not None else DefaultConfig
+    def __init__(self, speech_config=None):
+        self.config = speech_config if speech_config is not None else DefaultConfig
         self.init_model()
+        if self.config["device"] == None:
+            device_name = config["stt"]["device"]["name"]
+            device_idx = self.device_index_by_name(device_name)
+            self.config["device"] = device_idx
+
+    def device_index_by_name(self, name):
+        pa = pyaudio.PyAudio()
+        devices = pa.get_device_count()
+        for idx in range(devices):
+            info = pa.get_device_info_by_index(idx)
+            if name.lower() in info["name"].lower():
+                return info["index"]
+        msg = "recording device '%s' not found" % name
+        raise ValueError(msg)
 
     def init_model(self):
         model_dir = self.config["model_dir"]
@@ -170,7 +187,7 @@ class SpeechToText(object):
     def listen(self):
         vad_audio = VADAudio(aggressiveness=self.config["vad_aggressiveness"],
                              device=self.config["device"],
-                             input_rate=self.config["sample_rate"])
+                             input_rate=self.config["input_rate"])
         frames = vad_audio.vad_collector()
         stream_context = self.model.setupStream()
         for frame in frames:

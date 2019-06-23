@@ -1,5 +1,6 @@
 from .. config import config
 from .. import bus
+from .. logger import *
 
 import threading
 import math
@@ -23,10 +24,18 @@ class PresenceService(bus.Service):
 
     def run(self):
         self.running = True
+        last_state = False
         while self.running:
-            time.sleep(1)
+            #print(self.decay.value)
+            state = bool(self.decay)
+            if state != last_state:
+                last_state = state
+                msg = "Presence set to %s" % state
+                debug(msg)
+            time.sleep(.1)
 
     def impulse_callback(self):
+        #debug("impulse")
         self.decay += self.impulse
 
     @bus.proxy
@@ -38,7 +47,7 @@ class PresenceService(bus.Service):
         return bool(self.decay)
 
 class Decay(object):
-    def __init__(self, initial=0, halflife=-.1, threshold=.5, maxval=10):
+    def __init__(self, initial=0, halflife=-.05, threshold=.5, maxval=10):
         self.halflife = halflife
         self.maxval = maxval
         self.threshold = threshold

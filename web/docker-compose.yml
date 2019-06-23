@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+  isso:
+    image: isso
+    ports:
+      - 10101:8080
+    volumes:
+      - /tmp/isso/config:/config
+      - /tmp/isso/db:/db
+  gallery:
+    image: nginx:alpine
+    ports:
+      - 5000:80
+    volumes:
+      - /tmp/gallery:/usr/share/nginx/html

@@ -2,3 +2,4 @@ gphoto2
 exifread
 tblib
 redis
+sigal

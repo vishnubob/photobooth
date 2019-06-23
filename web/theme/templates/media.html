@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+  <header>
+    {% block breadcrumb %}
+    {% if album.breadcrumb %}
+    <h2>
+      {% for url, title in album.breadcrumb %}
+      <a href="{{ url }}">{{ title }}</a> »
+      {% endfor -%}
+      <a href="#">{{ media.title }}</a>
+    </h2>
+    <hr>
+    {% endif %}
+    {% endblock %}
+  </header>
+
+{% block content %}
+  {% if media %}
+  <div>
+    <p>
+      {% if previous_media %}
+      <a href="{{ previous_media.url }}.html">« previous</a>
+      {% endif %}
+      {% if next_media %}
+      <a href="{{ next_media.url }}.html">next »</a>
+      {% endif %}
+    </p>
+    {% if media.type == "image" %}
+      <img width="{{ media.size['width'] }}" height="{{ media.size['height'] }}" src="{{ media.url }}" alt="{{ media.title }}" title="{{ media.title }}" />
+      <section id="isso-thread"></section>
+      <script data-isso="//192.168.1.3:10101/" src="//192.168.1.3:10101/js/embed.min.js"></script>
+    {% endif %}
+    {% if media.type == "video" %}
+      <video controls>
+        <source src='{{ media.url }}' type='video/webm' />
+      </video>
+    {% endif %}
+
+    <p>
+      {% if previous_media %}
+      <a href="{{ previous_media.url }}.html">« previous</a>
+      {% endif %}
+      {% if next_media %}
+      <a href="{{ next_media.url }}.html">next »</a>
+      {% endif %}
+    </p>
+  </div>
+  {% endif %}
+{% endblock %}

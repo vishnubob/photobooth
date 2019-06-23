@@ -5,6 +5,7 @@ import json
 import pickle
 import uuid
 import threading
+from . config import config
 
 from tblib import pickling_support
 pickling_support.install()
@@ -13,7 +14,7 @@ from . base import Singleton
 #from photobooth.base import Singleton
 
 class MessageBus(Singleton):
-    RedisHost = "192.168.1.3"
+    RedisHost = config["redis"]["host"]
 
     def init_instance(self):
         self.rds = redis.Redis(self.RedisHost)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
-from photobooth import photobooth, load_config
+from photobooth import load_config
 
 def cli():
     parent_parser = argparse.ArgumentParser(description="Photobooth")
@@ -29,11 +29,16 @@ def cli():
     # photolab
     photolab_parser = services_parser.add_parser("photolab", help="photolab help")
 
+    # log reader
+    logreader_parser = services_parser.add_parser("log", help="log reader help")
+    logreader_parser.add_argument("-w", "--watch", action="store_true", default=False, help="watch log file")
+
     return parent_parser.parse_args()
 
 def main(args):
     load_config(args.config)
     if args.service == "photobooth":
+        from photobooth import photobooth
         photobooth.run()
     elif args.service == "display":
         from photobooth.service import display
@@ -50,6 +55,10 @@ def main(args):
     elif args.service == "stt":
         from photobooth.service import stt
         stt.run()
+    elif args.service == "log":
+        from photobooth.logger import LogReader
+        lr = LogReader()
+        lr.run()
 
 if __name__ == "__main__":
     args = cli()
