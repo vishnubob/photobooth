@@ -42,7 +42,8 @@ class Canvas(object):
         disp_no = os.getenv("DISPLAY")
         if disp_no:
             print("I'm running under X display = {0}".format(disp_no))
-        drivers = ['fbcon', 'directfb', 'svgalib', 'x11']
+        #drivers = ['fbcon', 'directfb', 'svgalib', 'x11']
+        drivers = ['X11', 'dga', 'ggi','vgl','directfb', 'fbcon', 'svgalib']
         found = False
         for driver in drivers:
             if not os.getenv('SDL_VIDEODRIVER'):

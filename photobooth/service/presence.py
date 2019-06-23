@@ -103,10 +103,16 @@ class PresenceDriverDummy(PresenceDriverBase):
 class PresenceDriverPIR(PresenceDriverBase):
     def __init__(self, **kw):
         super().__init__(**kw)
+        self.callback_map = {}
+        self.init_gpio()
+
+    def init_gpio(self):
         import pigpio
         self.pi = pigpio.pi()
-        self.pir_gpio = 17
-        self.cb_id = self.pi.callback(self.pir_gpio, pigpio.RISING_EDGE, self.presence_callback)
+        gpios = config["presence"]["pir"]["gpios"]
+        for gpio in gpios:
+            cb_id = self.pi.callback(gpio, pigpio.RISING_EDGE, self.presence_callback)
+            self.callback_map[gpio] = cb_id
 
     def presence_callback(self, gpio, level, tick):
         if level == 1:

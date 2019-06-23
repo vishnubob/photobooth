@@ -2,6 +2,7 @@ import time
 from .. config import config
 from .. base import Singleton
 from .. import bus
+from .. logger import *
 
 class SpeechToTextService(bus.Service):
     ServiceName = "SpeechToText"
@@ -14,6 +15,7 @@ class SpeechToTextService(bus.Service):
 
     @bus.proxy
     def listen(self):
+        debug("listening")
         return self.engine.listen()
 
 def run(**kw):

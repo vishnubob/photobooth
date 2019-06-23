@@ -18,10 +18,13 @@ def cli():
 
     # presence
     presence_parser = services_parser.add_parser("presence", help="presence help")
-    presence_parser.add_argument("-m", "--mode", dest="driver", choices=["dummy", "pir"], help="Use dummy mode")
+    presence_parser.add_argument("-m", "--mode", dest="driver", choices=["dummy", "pir"], default="pir", help="presence driver")
 
-    # presence
+    # stt
     stt_parser = services_parser.add_parser("stt", help="speech to text help")
+
+    # audio
+    audio_parser = services_parser.add_parser("audio", help="audio help")
 
     # camera
     camera_parser = services_parser.add_parser("camera", help="camera help")
@@ -55,6 +58,9 @@ def main(args):
     elif args.service == "stt":
         from photobooth.service import stt
         stt.run()
+    elif args.service == "audio":
+        from photobooth.service import audio
+        audio.run()
     elif args.service == "log":
         from photobooth.logger import LogReader
         lr = LogReader()
