@@ -1,58 +1,11 @@
 import random
-
-Dialog = {
-    "greetings": [
-        "hello",
-        "greetings",
-        "greetings and salutations",
-        "hi there",
-        "welcome",
-        "hey good looking"
-    ],
-    "processing": [
-        "processing, please wait",
-        "developing your photo",
-        "please wait while I process your photo"
-    ],
-    "introduction": [
-        "i am a photobooth",
-        "i am a computerized photographer",
-        "i want to take your picture",
-        "i am not staring at you.  i am a cyborg photographer.  just act natural.  this is a candid shot."
-    ],
-    "ready": [
-        "when you are ready, say ready, and i will take your picture"
-    ],
-    "bored": [
-        "ready or not, here we go"
-    ],
-    "background": [
-        "please speak the name of the background you would like to appear in front of."
-    ],
-    "shy": [
-        "either you are shy and did not say anything, or i did not hear you"
-    ],
-    "appraisal": [
-        "i think this is the best photograph i have ever taken",
-        "you look absolutely beautiful",
-        "what an amazing picture",
-        "wow! this should hang in a museum",
-        "one word. amazing.",
-        "eat your heart out, ansel adams"
-    ]
-}
-
-Sentences = {
-    "introduction": ["greetings", "introduction"],
-    "ready": ["ready"],
-    "bored": ["bored"],
-    "background": ["background"],
-    "shy": ["shy"],
-    "processing": ["processing"],
-    "appraisal": ["appraisal"],
-}
+import jellyfish
+from . config import config
 
 class SpeechWriter(object):
+    Dialog = config["dialog"]["scripts"]
+    Sentences = config["dialog"]["sentences"]
+
     def __init__(self, dialog_map=Dialog, sentence_map=Sentences):
         self.dialog_map = dialog_map
         self.sentence_map = sentence_map
@@ -71,3 +24,48 @@ class SpeechWriter(object):
     def get_script(self, topic):
         text = list(self.build(topic))
         return text
+
+class SpeechDecoder(object):
+    Choices = config["dialog"]["choices"]
+    Weights = {  
+        "soundex": 0.2,
+        "match_rating_codex": 0.2,
+        "metaphone": 0.7,
+        "nysiis": 0.1
+    }
+
+    def __init__(self, choices=Choices):
+        self.choices = choices
+
+    def measure_one(self, test, target, algorithm):
+        weight = self.Weights[algorithm]
+        func = getattr(jellyfish, algorithm)
+        test_phone = func(test)
+        target_phone = func(target)
+        score = jellyfish.damerau_levenshtein_distance(test_phone, target_phone)
+        return score * weight
+
+    def measure(self, test, target):
+        if test == target:
+            return 0
+        scores = [self.measure_one(test, target, al) for al in self.Weights]
+        return sum(scores)
+
+    def best_score(self, spoken, aliases):
+        words = spoken.split(' ')
+        scores = []
+        for word in words:
+            sc = [self.measure(word, alias) for alias in aliases]
+            scores += sc
+        return min(scores)
+
+    def decode(self, spoken, key):
+        choices = self.choices[key]
+        best_choice = None
+        results = []
+        for choice in choices:
+            aliases = choices[choice]
+            result = (choice, self.best_score(spoken, aliases))
+            results.append(result)
+        results.sort(key=lambda it: it[0])
+        return results

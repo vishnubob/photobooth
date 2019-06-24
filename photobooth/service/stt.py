@@ -18,6 +18,11 @@ class SpeechToTextService(bus.Service):
         debug("listening")
         return self.engine.listen()
 
+    @bus.proxy
+    def stop(self):
+        debug("stop stt")
+        return self.engine.abort()
+
 def run(**kw):
     server = SpeechToTextService(serve=True)
     server.run()

@@ -13,7 +13,6 @@ class USBCamera(BaseCamera):
         self.datastore = DataStore()
         self.timers = Timers()
 
-    def capture(self):
-        prefix = self.datastore.get_path("negatives")
-        img = self.camera.capture(copy=True, prefix=prefix)
+    def capture(self, fn_target=None):
+        img = self.camera.capture(copy=True, fn_target=fn_target)
         return img

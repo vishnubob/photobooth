@@ -7,6 +7,7 @@ from . keys import get_input
 from . timers import Timer
 from . events import EventManager
 from . config import config
+from . session import Session
 
 def register_state(cls):
     machine = StateMachine()
@@ -48,7 +49,16 @@ class StateMachine(Singleton):
         self._current_state = None
         self._next_state = None
         self._timeout_timer = None
+        self.session = None
         self.states = {}
+
+    def new_session(self):
+        self.session = Session()
+
+    def close_session(self):
+        if self.session is None:
+            return
+        self.session.close()
 
     def add_state(self, state_class):
         state = state_class()
@@ -99,6 +109,7 @@ class IdleState(BaseState):
         presence = photobooth.presence.check_presence().wait()
         if presence:
             next_state = {"state_name": "ready"}
+            self.states.new_session()
             self.states.set_next_state("speak", topic="introduction", next_state=next_state)
     
 @register_state
@@ -131,7 +142,10 @@ class Ready(BaseState):
             word = self.listen.value
             if word == "ready":
                 self.states.set_next_state("countdown")
+            else:
+                self.listen = photobooth.stt.listen()
         elif self.timer.expired:
+            self.listen.stop()
             self.speaker = photobooth.audio.speak_dialog("bored")
             self.speaker.wait()
             self.states.set_next_state("countdown")
@@ -154,7 +168,6 @@ class CountdownState(BaseState):
         if elapsed != self.last_report:
             self.last_report = elapsed
             msg = str(self.DelayCount - elapsed)
-            #print(msg, self.timer.elapsed)
             photobooth.audio.speak(msg)
             photobooth.display.display_text(msg)
 
@@ -164,7 +177,9 @@ class CaptureState(BaseState):
     Timeout = 10
 
     def enter(self, last_state, **kw):
-        self.capture_result = photobooth.camera.capture()
+        self.states.session.inc_image()
+        fn_target = self.states.session.capture_path
+        self.capture_result = photobooth.camera.capture(fn_target=fn_target)
 
     def tick(self):
         if not self.capture_result.poll():
@@ -189,7 +204,7 @@ class ProcessState(BaseState):
         self.fn_source = fn_image
         self.fn_backdrop = self.select_backdrop()
         image_name = os.path.split(self.fn_source)[-1]
-        self.fn_target = photobooth.datastore.get_path("processed", image_name)
+        self.fn_target = self.states.session.processed_path
         photolab_request = {
             "fn_source": self.fn_source,
             "fn_target": self.fn_target,
@@ -231,5 +246,19 @@ class DisplayState(BaseState):
         if presence:
             next_state = "countdown"
         else:
-            next_state = "idle"
+            next_state = "cooldown"
         self.states.set_next_state(next_state)
+
+@register_state
+class Cooldown(BaseState):
+    Name = "cooldown"
+    DelayCount = 10
+    Timeout = 15
+
+    def enter(self, last_state, **kw):
+        self.timer = Timer(self.DelayCount)
+
+    def tick(self):
+        if not self.timer.expired:
+            return
+        self.states.set_next_state("idle")

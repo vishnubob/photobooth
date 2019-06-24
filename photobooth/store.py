@@ -49,3 +49,10 @@ class DataStore(Singleton):
         if filename:
             path = os.path.join(path, filename)
         return path
+
+    def new_path(self, catalog, *dirpath):
+        root = self.paths[catalog]
+        new_path = os.path.join(*dirpath)
+        new_path = os.path.join(root, new_path)
+        os.makedirs(new_path, exist_ok=True)
+        return new_path

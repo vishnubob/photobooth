@@ -3,3 +3,4 @@ exifread
 tblib
 redis
 sigal
+jellyfish

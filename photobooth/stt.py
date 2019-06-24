@@ -184,13 +184,21 @@ class SpeechToText(object):
         )
         self.model.enableDecoderWithLM(alphabet, lm, trie, self.config["lm_alpha"], self.config["lm_beta"])
 
+    def abort(self):
+        self._abort = True
+
     def listen(self):
+        self._abort = False
         vad_audio = VADAudio(aggressiveness=self.config["vad_aggressiveness"],
                              device=self.config["device"],
                              input_rate=self.config["input_rate"])
         frames = vad_audio.vad_collector()
         stream_context = self.model.setupStream()
         for frame in frames:
+            if self._abort:
+                logger.debug("aborted")
+                text = self.model.finishStream(stream_context)
+                return
             logger.debug("streaming frame")
             self.model.feedAudioContent(stream_context, np.frombuffer(frame, np.int16))
         logger.debug("end utterence")

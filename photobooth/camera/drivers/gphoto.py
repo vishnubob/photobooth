@@ -183,10 +183,10 @@ class CameraFrontend(object):
         widget = self.camera.get_config()
         return CameraConfig(widget, self.camera)
          
-    def capture(self, copy=False, prefix=""):
+    def capture(self, copy=False, fn_target=None, prefix=""):
         file_path = self.camera.capture(gphoto2.GP_CAPTURE_IMAGE)
         if copy:
-            return self.copy_file(file_path, prefix=prefix)
+            return self.copy_file(file_path, fn_target=fn_target, prefix=prefix)
         return file_path
 
     def get_thumbnail(self, filename=None, refresh=False):
@@ -231,16 +231,17 @@ class CameraFrontend(object):
         res = self.camera.folder_delete_all(path)
         return res
 
-    def copy_file(self, file_path, prefix="", stubfn=""):
-        target_fn = file_path.name
-        target_fn = os.path.splitext(target_fn)
-        target_fn = target_fn[0] + stubfn + target_fn[1]
-        target_fn = os.path.join(prefix, target_fn)
-        print('Copying image to %s' % target_fn)
+    def copy_file(self, file_path, fn_target=None, prefix="", stubfn=""):
+        if fn_target is None:
+            fn_target = file_path.name
+            fn_target = os.path.splitext(fn_target)
+            fn_target = fn_target[0] + stubfn + fn_target[1]
+            fn_target = os.path.join(prefix, fn_target)
+        print('Copying image to %s' % fn_target)
         camera_file = self.camera.file_get(file_path.folder, file_path.name, gphoto2.GP_FILE_TYPE_NORMAL)
-        self.camera.api.file_save(camera_file, target_fn)
-        self.last_image = target_fn
-        return target_fn
+        self.camera.api.file_save(camera_file, fn_target)
+        self.last_image = fn_target
+        return fn_target
     
     def download_all(self, prefix='', stubfn=''):
         pics = self.list_files()

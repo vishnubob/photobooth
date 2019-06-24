@@ -1,0 +1,108 @@
+{
+  "photobooth": {
+    "redis": {
+      "host": "192.168.1.3"
+    },
+    "stt": {
+      "device": {
+        "name": "C-Media USB Audio Device"
+      }
+    },
+    "log": {
+      "filename": "/tmp/photbooth.log",
+      "redis_destination": "photobooth.log",
+      "level": "DEBUG"
+    },
+    "images": {
+      "resolution": [1280, 720]
+    },
+    "_camera": {
+      "class": "camera.mock.MockCamera",
+      "mock_image": "mock/capture.jpg"
+    },
+    "camera": {
+      "class": "camera.usb.USBCamera"
+    },
+    "presence": {
+      "pir": {
+        "gpios": [17, 27]
+      }
+    },
+    "graphics": {
+    },
+    "store": {
+      "paths": {
+        "root": "data",
+        "session": "session",
+        "negatives": "negatives",
+        "backdrops": "backdrops",
+        "processed": "processed"
+      }
+    },
+    "dialog": {
+      "scripts": {
+        "greet": [
+          "hello",
+          "greetings",
+          "greetings and salutations",
+          "hi there",
+          "welcome",
+          "hey good looking"
+        ],
+        "processing": [
+          "processing, please wait",
+          "developing your photo",
+          "please wait while I process your photo"
+        ],
+        "introduction": [
+          "i am a photobooth",
+          "i am a computerized photographer",
+          "i want to take your picture",
+          "i am not staring at you.  i am a cyborg photographer.  just act natural.  this is a candid shot."
+        ],
+        "same_backdrop": [
+          "do you want the same backdrop?"
+        ],
+        "ready": [
+          "when you are ready, say ready, and i will take your picture"
+        ],
+        "bored": [
+          "ready or not, here we go"
+        ],
+        "background": [
+          "please speak the name of the background you would like to appear in front of."
+        ],
+        "shy": [
+          "either you are shy and did not say anything, or i did not hear you"
+        ],
+        "appraisal": [
+          "i think this is the best photograph i have ever taken",
+          "you look absolutely beautiful",
+          "what an amazing picture",
+          "wow! this should hang in a museum",
+          "one word. amazing.",
+          "eat your heart out, ansel adams"
+        ]
+      },
+      "sentences": {
+        "introduction": ["greet", "introduction"],
+        "ready": ["ready"],
+        "bored": ["bored"],
+        "background": ["background"],
+        "shy": ["shy"],
+        "processing": ["processing"],
+        "appraisal": ["appraisal"],
+        "same_backdrop": ["same_backdrop"]
+      },
+      "choices": {
+        "yesno": {
+          "yes": ["yes", "affirmative", "roger"],
+          "no": ["no", "negative", "nope"]
+        },
+        "ready": {
+          "ready": ["ready", "yes", "go"]
+        }
+      }
+    }
+  }
+}

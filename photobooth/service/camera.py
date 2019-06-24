@@ -22,8 +22,8 @@ class CameraService(bus.Service):
             time.sleep(1)
 
     @bus.proxy
-    def capture(self):
-        return self.camera.capture()
+    def capture(self, fn_target=None):
+        return self.camera.capture(fn_target=fn_target)
 
 def run(**kw):
     service = CameraService(serve=True, **kw)
