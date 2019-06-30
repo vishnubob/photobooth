@@ -60,7 +60,8 @@ class Canvas(object):
         modes = pg.display.list_modes()
         print(modes)
         #pg.display.set_mode(modes[0])
-        pg.display.set_mode(self.DefaultResolution, pg.RESIZABLE)
+        #pg.display.set_mode(self.DefaultResolution, pg.RESIZABLE)
+        pg.display.set_mode(self.DefaultResolution)
         #pg.display.toggle_fullscreen()
         
     def init_pygame(self):
@@ -155,8 +156,11 @@ class DisplayEngine(Singleton, threading.Thread):
         self.start()
 
     def run(self):
-        self.running = True
-        while self.running:
-            self.control.draw()
-            self.canvas.loop()
+        try:
+            self.running = True
+            while self.running:
+                self.control.draw()
+                self.canvas.loop()
+        finally:
+            pg.quit()
 

@@ -11,7 +11,10 @@ class SpeechWriter(object):
         self.sentence_map = sentence_map
 
     def build(self, topic):
-        structure = self.sentence_map[topic]
+        if topic in self.sentence_map:
+            structure = self.sentence_map[topic]
+        else:
+            structure = [topic]
         for element in structure:
             choices = self.dialog_map[element]
             choice = random.choice(choices)

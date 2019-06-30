@@ -8,6 +8,7 @@ import webrtcvad
 from scipy import signal
 from . logger import logger
 from . config import config
+from . timers import Timer
 
 class Audio(object):
     """Streams raw audio from microphone. Data is received in a separate thread, and stored in a buffer, to be read from."""
@@ -108,54 +109,60 @@ class VADAudio(Audio):
                       |---utterence---|        |---utterence---|
         """
         self.start_stream()
-        if frames is None: frames = self.frame_generator()
-        num_padding_frames = padding_ms // self.frame_duration_ms
-        ring_buffer = collections.deque(maxlen=num_padding_frames)
-        triggered = False
+        try:
+            if frames is None: frames = self.frame_generator()
+            num_padding_frames = padding_ms // self.frame_duration_ms
+            ring_buffer = collections.deque(maxlen=num_padding_frames)
+            triggered = False
 
-        for frame in frames:
-            is_speech = self.vad.is_speech(frame, self.sample_rate)
+            for frame in frames:
+                is_speech = self.vad.is_speech(frame, self.sample_rate)
 
-            if not triggered:
-                ring_buffer.append((frame, is_speech))
-                num_voiced = len([f for f, speech in ring_buffer if speech])
-                if num_voiced > ratio * ring_buffer.maxlen:
-                    triggered = True
-                    for f, s in ring_buffer:
-                        yield f
-                    ring_buffer.clear()
+                if not triggered:
+                    ring_buffer.append((frame, is_speech))
+                    num_voiced = len([f for f, speech in ring_buffer if speech])
+                    if num_voiced > ratio * ring_buffer.maxlen:
+                        triggered = True
+                        for f, s in ring_buffer:
+                            yield f
+                        ring_buffer.clear()
 
-            else:
-                yield frame
-                ring_buffer.append((frame, is_speech))
-                num_unvoiced = len([f for f, speech in ring_buffer if not speech])
-                if num_unvoiced > ratio * ring_buffer.maxlen:
-                    triggered = False
-                    ring_buffer.clear()
-                    break
-        self.stop_stream()
-
-DefaultConfig = {
-    "model_dir": "model",
-    "beam_width": 500,
-    "sample_rate": 16000,
-    "input_rate": 48000,
-    "lm_alpha": 0.75,
-    "lm_beta": 1.85,
-    "n_features": 26,
-    "n_context": 9,
-    "vad_aggressiveness": 3,
-    "device": None,
-}
+                else:
+                    yield frame
+                    ring_buffer.append((frame, is_speech))
+                    num_unvoiced = len([f for f, speech in ring_buffer if not speech])
+                    if num_unvoiced > ratio * ring_buffer.maxlen:
+                        triggered = False
+                        ring_buffer.clear()
+                        break
+        finally:
+            self.stop_stream()
 
 class SpeechToText(object):
+    DefaultConfig = {
+        "model_dir": "model",
+        "beam_width": 500,
+        "sample_rate": 16000,
+        "input_rate": 16000,
+        "lm_alpha": 0.75,
+        "lm_beta": 1.85,
+        "n_features": 26,
+        "n_context": 9,
+        "vad_aggressiveness": 3,
+        "device": None,
+        "timeout": 20,
+    }
+
     def __init__(self, speech_config=None):
-        self.config = speech_config if speech_config is not None else DefaultConfig
+        self.config = self.DefaultConfig.copy()
+        if speech_config is not None:
+            self.config.update(speech_config)
         self.init_model()
         if self.config["device"] == None:
             device_name = config["stt"]["device"]["name"]
             device_idx = self.device_index_by_name(device_name)
             self.config["device"] = device_idx
+        self.timeout = self.config["timeout"]
 
     def device_index_by_name(self, name):
         pa = pyaudio.PyAudio()
@@ -194,11 +201,14 @@ class SpeechToText(object):
                              input_rate=self.config["input_rate"])
         frames = vad_audio.vad_collector()
         stream_context = self.model.setupStream()
+        timeout_timer = Timer(self.timeout)
         for frame in frames:
             if self._abort:
                 logger.debug("aborted")
-                text = self.model.finishStream(stream_context)
-                return
+                break
+            if timeout_timer.expired:
+                logger.debug("timeout")
+                break
             logger.debug("streaming frame")
             self.model.feedAudioContent(stream_context, np.frombuffer(frame, np.int16))
         logger.debug("end utterence")

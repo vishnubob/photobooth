@@ -1,12 +1,18 @@
 {
   "photobooth": {
     "redis": {
-      "host": "192.168.1.3"
+      "host": "redis"
     },
     "stt": {
       "device": {
-        "name": "C-Media USB Audio Device"
+        "name": "USB Audio CODEC"
       }
+    },
+    "powersave": {
+        "timeout": 60
+    },
+    "projector": {
+      "device": "/dev/projector"
     },
     "log": {
       "filename": "/tmp/photbooth.log",
@@ -49,6 +55,28 @@
           "welcome",
           "hey good looking"
         ],
+        "tips": [
+            "if you have a phone, you can join the photobooth why fi and browse the gallery",
+            "if you want to spice up your picture, grab a prop from the prop bucket",
+            "you can browse the pictures by using my wireless access point",
+            "go have a beer at bring a cup, and browse the images on your phone"
+        ],
+        "explain_greenscreen": [
+          "you are standing in front of a green screen, and i will replace this with a back ground image.  i have a variety of back grounds you can pick from."
+        ],
+        "question_pick": [
+          "would you like to choose your back ground?",
+          "if you want to choose your own back ground, say yes"
+        ],
+        "random_pick": [
+          "ok, i will pick a back ground for you"
+        ],
+        "question_backdrop": [
+          "do you like this back ground?",
+          "how about this one?",
+          "this is nice, do you like it?",
+          "does this back ground work for you?"
+        ],
         "processing": [
           "processing, please wait",
           "developing your photo",
@@ -60,8 +88,11 @@
           "i want to take your picture",
           "i am not staring at you.  i am a cyborg photographer.  just act natural.  this is a candid shot."
         ],
+        "no_understand": [
+          "i am sorry, but i did not understand what you said"
+        ],
         "same_backdrop": [
-          "do you want the same backdrop?"
+          "would you like to use the same back ground?"
         ],
         "ready": [
           "when you are ready, say ready, and i will take your picture"
@@ -76,23 +107,19 @@
           "either you are shy and did not say anything, or i did not hear you"
         ],
         "appraisal": [
+          "am i good, or am i good",
           "i think this is the best photograph i have ever taken",
           "you look absolutely beautiful",
           "what an amazing picture",
           "wow! this should hang in a museum",
           "one word. amazing.",
-          "eat your heart out, ansel adams"
+          "eat your heart out, ansel adams",
+          "you look so hot",
+          "god damn, i'm good"
         ]
       },
       "sentences": {
-        "introduction": ["greet", "introduction"],
-        "ready": ["ready"],
-        "bored": ["bored"],
-        "background": ["background"],
-        "shy": ["shy"],
-        "processing": ["processing"],
-        "appraisal": ["appraisal"],
-        "same_backdrop": ["same_backdrop"]
+        "introduction": ["greet", "introduction", "explain_greenscreen"]
       },
       "choices": {
         "yesno": {

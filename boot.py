@@ -8,18 +8,34 @@ import signal
 
 class JobControl(object):
     HostJobs = {
-        "sage": {
-            "stt": {},
-            "photolab": {},
+        "node-1": {
+            "photolab": {
+                "order": 1,
+            },
+            "audio": {
+                "order": 2,
+            },
+            "stt": {
+                "order": 3,
+            },
         },
-        "photobooth": {
-            "photobooth": {},
-            "audio": {},
-            "camera": {},
-            "presence": {},
+        "node-2": {
+            "projector": {
+                "order": 1,
+            },
             "display": {
+                "order": 2,
                 "sudo": True
-            }
+            },
+            "camera": {
+                "order": 3,
+            },
+            "presence": {
+                "order": 4,
+            },
+            "photobooth": {
+                "order": 5,
+            },
         }
     }
 
@@ -52,9 +68,11 @@ class JobControl(object):
         self.procs[job] = proc
 
     def start(self):
-        jobs = self.HostJobs[self.hostname]
-        for job in jobs:
-            self.run_job(job)
+        jobs = list(self.HostJobs[self.hostname].items())
+        jobs.sort(key=lambda it: it[1].get("order", 0))
+        for (jobname, jobinfo) in jobs:
+            self.run_job(jobname)
+            time.sleep(1)
 
     def monitor(self):
         while True:

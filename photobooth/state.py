@@ -49,8 +49,18 @@ class StateMachine(Singleton):
         self._current_state = None
         self._next_state = None
         self._timeout_timer = None
+        self.global_state = {}
         self.session = None
         self.states = {}
+
+    def set_global(self, key, value):
+        self.global_state[key] = value
+
+    def get_global(self, key):
+        return self.global_state.get(key, None)
+
+    def pop_global(self, key):
+        return self.global_state.pop(key, None)
 
     def new_session(self):
         self.session = Session()
@@ -105,13 +115,26 @@ class IdleState(BaseState):
     Name = "idle"
     Timeout = -1
 
+    def enter(self, last_state, **kw):
+        self._long_idle = False
+        self._long_idle_timer = Timer(config["powersave"]["timeout"])
+
     def tick(self):
         presence = photobooth.presence.check_presence().wait()
         if presence:
-            next_state = {"state_name": "ready"}
+            next_state = {"state_name": "ask_backdrop"}
             self.states.new_session()
             self.states.set_next_state("speak", topic="introduction", next_state=next_state)
-    
+        if not self._long_idle:
+            if self._long_idle_timer.expired:
+                self.lights.off()
+                self.projector.off()
+
+    def exit(self, next_state):
+        if self._long_idle:
+            self.lights.on()
+            self.projector.on()
+
 @register_state
 class Speak(BaseState):
     Name = "speak"
@@ -126,6 +149,107 @@ class Speak(BaseState):
             return
         self.states.set_next_state(**self.next_state)
     
+@register_state
+class AskBackdrop(BaseState):
+    Name = "ask_backdrop"
+    DelayCount = 20
+
+    def enter(self, last_state):
+        self.speaker = photobooth.audio.speak_dialog("question_pick")
+        self.speaker.wait()
+        self.listen = photobooth.stt.listen()
+        self.timer = Timer(self.DelayCount)
+
+    def tick(self):
+        if self.listen.poll():
+            word = self.listen.value
+            if word == "yes":
+                self.states.set_next_state("pick_backdrop")
+            elif word == "no":
+                self.speaker = photobooth.audio.speak_dialog("random_pick")
+                self.speaker.wait()
+                self.states.set_next_state("ready")
+            elif word:
+                self.speaker = photobooth.audio.speak_dialog("no_understand")
+                self.speaker.wait()
+                self.listen = photobooth.stt.listen()
+            else:
+                self.listen = photobooth.stt.listen()
+        elif self.timer.expired:
+            photobooth.stt.stop()
+            self.speaker = photobooth.audio.speak_dialog("random_pick")
+            self.speaker.wait()
+            self.states.set_next_state("ready")
+    
+@register_state
+class PickBackdrop(BaseState):
+    Name = "pick_backdrop"
+    DelayCount = 20
+
+    def enter(self, last_state):
+        self.backdrops = list(photobooth.datastore.backdrops.keys())
+        random.shuffle(self.backdrops)
+        self.pop_and_show()
+
+    def pop_and_show(self):
+        self.selected_backdrop = self.backdrops.pop()
+        bgpath = photobooth.datastore.backdrops[self.selected_backdrop]
+        photobooth.display.display_image(bgpath)
+        self.speaker = photobooth.audio.speak_dialog("question_backdrop")
+        self.speaker.wait()
+        self.listen = photobooth.stt.listen()
+        self.timer = Timer(self.DelayCount)
+
+    def tick(self):
+        if self.listen.poll():
+            word = self.listen.value
+            if word == "yes":
+                self.states.set_global("backdrop", self.selected_backdrop)
+                self.states.set_next_state("ready")
+            elif word == "no":
+                self.pop_and_show()
+            elif word:
+                self.speaker = photobooth.audio.speak_dialog("no_understand")
+                self.speaker.wait()
+                self.listen = photobooth.stt.listen()
+            else:
+                self.listen = photobooth.stt.listen()
+        elif self.timer.expired:
+            self.pop_and_show()
+
+@register_state
+class SameBackdrop(BaseState):
+    Name = "same_backdrop"
+    DelayCount = 20
+
+    def enter(self, last_state):
+        self.speaker = photobooth.audio.speak_dialog("same_backdrop")
+        self.speaker.wait()
+        self.listen = photobooth.stt.listen()
+        self.timer = Timer(self.DelayCount)
+
+    def tick(self):
+        if self.listen.poll():
+            word = self.listen.value
+            if word == "yes":
+                bgname = self.states.pop_global("last_backdrop")
+                self.states.set_global("backdrop", bgname)
+                self.states.set_next_state("ready")
+            elif word == "no":
+                self.states.set_next_state("ask_backdrop")
+            elif word:
+                self.speaker = photobooth.audio.speak_dialog("no_understand")
+                self.speaker.wait()
+                self.listen = photobooth.stt.listen()
+            else:
+                self.listen = photobooth.stt.listen()
+        elif self.timer.expired:
+            photobooth.stt.stop()
+            self.speaker = photobooth.audio.speak_dialog("random_pick")
+            self.speaker.wait()
+            self.states.set_next_state("ready")
+
+
 @register_state
 class Ready(BaseState):
     Name = "ready"
@@ -142,10 +266,14 @@ class Ready(BaseState):
             word = self.listen.value
             if word == "ready":
                 self.states.set_next_state("countdown")
+            elif word:
+                self.speaker = photobooth.audio.speak_dialog("no_understand")
+                self.speaker.wait()
+                self.listen = photobooth.stt.listen()
             else:
                 self.listen = photobooth.stt.listen()
         elif self.timer.expired:
-            self.listen.stop()
+            photobooth.stt.stop()
             self.speaker = photobooth.audio.speak_dialog("bored")
             self.speaker.wait()
             self.states.set_next_state("countdown")
@@ -195,9 +323,12 @@ class ProcessState(BaseState):
 
     def select_backdrop(self):
         backdrops = photobooth.datastore.backdrops
-        keys = list(backdrops.keys())
-        bgname = random.choice(keys)
+        bgname = self.states.pop_global("backdrop")
+        if bgname == None:
+            keys = list(backdrops.keys())
+            bgname = random.choice(keys)
         bgpath = backdrops[bgname]
+        self.states.set_global("last_backdrop", bgname)
         return bgpath
 
     def enter(self, last_state, fn_image=None, **kw):
@@ -239,12 +370,16 @@ class DisplayState(BaseState):
         self.speaker = photobooth.audio.speak_dialog("appraisal")
         self.timer = Timer(self.DelayCount)
 
+    def exit(self, next_state):
+        speaker = photobooth.audio.speak_dialog("tips")
+        speaker.wait()
+
     def tick(self):
         if not self.timer.expired:
             return
         presence = photobooth.presence.check_presence().wait()
         if presence:
-            next_state = "countdown"
+            next_state = "same_backdrop"
         else:
             next_state = "cooldown"
         self.states.set_next_state(next_state)
@@ -259,6 +394,5 @@ class Cooldown(BaseState):
         self.timer = Timer(self.DelayCount)
 
     def tick(self):
-        if not self.timer.expired:
-            return
-        self.states.set_next_state("idle")
+        if self.timer.expired:
+            self.states.set_next_state("idle")

@@ -19,7 +19,7 @@ source = 'gallery'
 
 # Destination directory. Can be set here or as the second argument of the
 # `sigal build` command (default: '_build')
-destination = '/tmp/gallery/'
+destination = '/photobooth/web/gallery/'
 
 # Theme :
 # - colorbox (default), galleria, photoswipe, or the path to a custom theme directory

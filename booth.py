@@ -36,6 +36,9 @@ def cli():
     logreader_parser = services_parser.add_parser("log", help="log reader help")
     logreader_parser.add_argument("-w", "--watch", action="store_true", default=False, help="watch log file")
 
+    # log reader
+    projector_parser = services_parser.add_parser("projector", help="projector control help")
+
     return parent_parser.parse_args()
 
 def main(args):
@@ -65,6 +68,9 @@ def main(args):
         from photobooth.logger import LogReader
         lr = LogReader()
         lr.run()
+    elif args.service == "projector":
+        from photobooth.service import projector
+        projector.run()
 
 if __name__ == "__main__":
     args = cli()

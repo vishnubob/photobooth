@@ -4,3 +4,12 @@ tblib
 redis
 sigal
 jellyfish
+redis
+pyttsx3
+pyaudio
+webrtcvad
+#numpy
+#scipy
+pygame
+pyserial
+paho-mqtt
